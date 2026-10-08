@@ -1,0 +1,32 @@
+name: seal-build
+
+# Build-and-pack only: the test suite (lint + requirejs + QUnit/PhantomJS)
+# runs on Travis via .travis.yml.
+on:
+  workflow_dispatch:
+
+jobs:
+  pack:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pack with Node 0.12 / npm 2 (the toolchain that published 1.12.1)
+        run: |
+          # .github is not covered by .gitignore (npm 2 packs it otherwise).
+          rm -rf .github
+          # .travis.yml ships in the tarball; restore the upstream 1.12.1 content
+          # (the version patch adds the time-machine registry and drops htmllint
+          # for our Travis legs).
+          printf 'sudo: required\ndist: trusty\nlanguage: node_js\nnode_js:\n  - "0.12"\n' > .travis.yml
+          mkdir -p "$RUNNER_TEMP/out"
+          docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp \
+            -v "$PWD":/src -v "$RUNNER_TEMP/out":/out -w /src node:0.12 \
+            sh -c 'node -v && npm -v && npm pack && mv jquery-ui-1.12.1.tgz /out/'
+          tar tzf "$RUNNER_TEMP/out/jquery-ui-1.12.1.tgz" | wc -l
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jquery-ui-1.12.1
+          path: ${{ runner.temp }}/out/jquery-ui-1.12.1.tgz

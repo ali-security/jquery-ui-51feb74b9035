@@ -3,3 +3,17 @@ dist: trusty
 language: node_js
 node_js:
   - "0.12"
+env:
+  global:
+    # PhantomJS 2.1.1 aborts ("Auto configuration failed") on the modern
+    # system openssl.cnf of current Travis images.
+    - OPENSSL_CONF=/dev/null
+before_install:
+  # Resolve devDependencies as of the 1.12.1 release: today's transitive deps
+  # (e.g. psl via request/tough-cookie) no longer parse on Node 0.12.
+  - npm config set registry https://:2016-09-14T16%3A34%3A20.374Z@time-machines-npm.sealsecurity.io/
+# `npm test` = `grunt` default (lint requirejs test) minus the htmllint gate:
+# grunt-html 6.0.0's vnu.jar demands Java 1.8 and the image ships Java 17.
+# seal-qunit-summary (.github/seal-grunt) prints the QUnit test-case counts.
+script:
+  - ./node_modules/.bin/grunt --tasks .github/seal-grunt asciilint jshint jscs csslint requirejs test seal-qunit-summary
